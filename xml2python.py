@@ -132,13 +132,11 @@ class TreeNode(object):
     def dump(self,ss,indent=0):
         """dump tree to string"""
         # ╚ ∟ ┗ └
-        tab = '    '*(indent-1) + ' └- ' if indent > 0 else ''
+        tab = '    '*(indent-1) + ' ├ ' if indent > 0 else ''
         if isinstance(self.data,str) or isinstance(self.data,int):
-#            print('%s%s%s' % (tab, str(self.name) + ':',self.data))
             ret = '%s%s%s%s' % (tab, str(self.name) + ':',self.data,'\n')
             ss[0] += ret
         else:    
-#            print('%s%s' % (tab, self.name))
             ret = '%s%s%s' % (tab, str(self.name),'\n')
             ss[0] += ret
         for name, obj in self.items():
@@ -236,6 +234,9 @@ print(gen_xml())
     sss = ['']
     sss_path = ''
     root.dump(sss)
+    if len(sys.argv) == 3:
+        if sys.argv[2] == '-tree':
+            print(sss[0])
     finder = dict_path_finder(d)
     path = finder.find_all_keys()
     code_list = []
