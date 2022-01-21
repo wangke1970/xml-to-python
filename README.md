@@ -1,5 +1,5 @@
-# xml-to-python
-xml to python
+# xml2python_code
+xml to python code
 1. pip install addict
 2. pip install xmltodict
 3. example:
