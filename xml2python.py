@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 __author__ = 'Wang Ke'
 import sys
 import os
@@ -5,29 +6,10 @@ import xmltodict
 from typing import List
 
 # change class dict_path_finder from https://github.com/kingname/JsonPathFinder/blob/main/JsonPathFinder.py
-class dict_path_finder:
-    def __init__(self, data, mode='key'):
+class dict_path:
+    def __init__(self, data):
         self.data = data
-        self.mode = mode
-
-    def iter_node(self, rows, road_step, target):
-        if isinstance(rows, dict):
-            key_value_iter = (x for x in rows.items())
-        elif isinstance(rows, list):
-            key_value_iter = (x for x in enumerate(rows))
-        else:
-            return
-        for key, value in key_value_iter:
-            current_path = road_step.copy()
-            current_path.append(key)
-            if self.mode == 'key':
-                check = key
-            else:
-                check = value
-            if check == target:
-                yield current_path
-            if isinstance(value, (dict, list)):
-                yield from self.iter_node(value, current_path, target)
+        self.sub_data = None
 
     def iter_node_all_keys(self, rows, road_step):
         if isinstance(rows, dict):
@@ -39,27 +21,40 @@ class dict_path_finder:
         for key, value in key_value_iter:
             current_path = road_step.copy()
             current_path.append(key)
-            if self.mode == 'key':
-                check = key
-                if isinstance(value,str) or isinstance(value,str):
-                    current_path.append('='+str(value))    
-                yield current_path    
+            #  xmltodict node value is string 
+            if isinstance(value,str):
+                current_path.append('='+value)
+            if isinstance(value,int):
+                current_path.append('='+str(value))
+            if value == None:
+                current_path.append('='+str(''))
+            yield current_path    
             if isinstance(value, (dict, list)):
                 yield from self.iter_node_all_keys(value, current_path)
-    
-    def find_one(self, target: str) -> list:
-        path_iter = self.iter_node(self.data, [], target)
-        for path in path_iter:
-            return path
-        return []
+        
+    def _node_keys(self, rows, node_name):
+        node_list = []
+        if isinstance(rows, dict):
+            key_value_iter = (x for x in rows.items())
+        elif isinstance(rows, list):
+            key_value_iter = (x for x in enumerate(rows))
+        else:
+            return
+        for key, value in key_value_iter:
+            if key == node_name:
+                self.sub_data={key:value}
+                return 
+            else:
+                self._node_keys(value,node_name)
+            
 
-    def find_all(self, target) -> List[list]:
-        path_iter = self.iter_node(self.data, [], target)
-        return list(path_iter)
-    
     def find_all_keys(self):
         path_iter = self.iter_node_all_keys(self.data, [])
         return path_iter
+    
+    # only from single big node example container bgp 
+    def find_value(self,node_name):        
+        path_iter = self._node_keys(self.data, node_name)    
     
 
 class TreeNode(object):
@@ -112,7 +107,7 @@ class TreeNode(object):
     def find_child(self, path, create=False):
         """find child node by path/name, return None if not found"""
         # convert path to a list if input is a string
-        path = path if isinstance(path, list) else path.split()
+        path = path if isinstance(path, list) else path.split('/')
         cur = self
         for sub in path:
             # search
@@ -184,9 +179,13 @@ def add_tree_node_in_folder(node,d):
         pass
 
 if __name__ == '__main__':
-    if '.xml' not in sys.argv[1]:
-        print('Error need xml file','python3 xml2python.py xxx.xml')
+    if len(sys.argv) < 2:
+        print('Error need xml file! ','Example:','python3 xml2python.py xxx.xml or ./xml2python.py xxx.xml')
         exit()
+    else:    
+        if '.xml' not in sys.argv[1]:
+            print('Error need xml file! ','Example:','python3 xml2python.py xxx.xml or ./xml2python.py xxx.xml')
+            exit()
     try:
         f = open(sys.argv[1],'rb')
         xml = f.read()
@@ -195,6 +194,7 @@ if __name__ == '__main__':
         exit()
     f.close()
     code_head = '''
+#!/usr/bin/env python3
 # pip install addict
 # pip install xmltodict
 from addict import Dict
@@ -229,26 +229,33 @@ print(gen_xml())
     except Exception as e:
         print('Error in xmltodict.parse:',e)
         exit(0)                                  
-    root = add_root_tree_node()
-    add_tree_node_in_folder(root,d)
-    sss = ['']
-    sss_path = ''
-    root.dump(sss)
+    finder = dict_path(d)
     if len(sys.argv) == 3:
         if sys.argv[2] == '-tree':
+            root = add_root_tree_node()
+            add_tree_node_in_folder(root,d)
+            sss = ['']
+            sss_path = ''
+            root.dump(sss)            
             print(sss[0])
-    finder = dict_path_finder(d)
+            exit()
+    if len(sys.argv) == 4:
+        if sys.argv[2] == '-node':
+            finder.find_value(sys.argv[3])
+            finder = dict_path(finder.sub_data)    
     path = finder.find_all_keys()
     code_list = []
     for i in path:
         code = 'd'
         for step in i:
-            step = str(step)
-            if '=' in step:
-                code += '="' + step.split('=',1)[1] +'"'
+            if isinstance(step,int):
+                code += '[' + repr(step) + ']'
+            elif '=' in step:
+                if step[1:].isdigit():
+                    code += '=' + step[1:]
+                else:
+                    code += '="' + step[1:] +'"'
                 code_list.append(code)
-            elif step.isdigit():
-                code += '['+step+']'
             else:
                 code += '["'+step+'"]'
     code_list_str = ''
