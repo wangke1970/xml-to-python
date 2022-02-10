@@ -4,10 +4,10 @@ xml to python code
 2. pip install xmltodict
 3. example:
    
-   python xml2python 1.xml
+   python3 xml2python 1.xml
    
    show xml tree
    
-   python xml2python 1.xml -tree
+   python3 xml2python 1.xml -tree
 
 
